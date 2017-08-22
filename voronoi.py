@@ -4,6 +4,8 @@ import numpy as np
 from scipy.spatial import Voronoi, voronoi_plot_2d
 from shapely.geometry import Polygon
 
+import progressbar
+
 def intersection(p1, p2):
     p1 = Polygon(p1)
     p2 = Polygon(p2)
@@ -114,6 +116,9 @@ def relaxed_voronoi(N, bbox, n_iter=2):
         radii.append(max(np.linalg.norm(centers[i] - p, axis=1)))
 
     neighbors = [[] for i in range(N)]
+
+    bar = progressbar.ProgressBar(max_value=len(polygons))
+
     for i, p1 in enumerate(polygons):
         for j, p2 in enumerate(polygons):
             if i >= j:
@@ -124,6 +129,8 @@ def relaxed_voronoi(N, bbox, n_iter=2):
             if share_side(p1, p2) >= 2:
                 neighbors[i].append(j)
                 neighbors[j].append(i)
+        bar.update(i)
+    bar.finish()
 
     vertices = []
     new_polygons = []
