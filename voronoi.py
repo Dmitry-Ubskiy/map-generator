@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import numpy as np
 from scipy.spatial import Voronoi, voronoi_plot_2d

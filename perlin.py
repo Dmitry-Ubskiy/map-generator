@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -64,4 +64,7 @@ class Perlin:
             mul *= 0.5
         
         return (result / maximum + 1) / 2
+
+    def __getitem__(self, x):
+        return self.at(*x)
 

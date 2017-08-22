@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -20,13 +20,13 @@ np.random.seed(seed)
 size = 4096
 bbox = [(0,0),(0,size),(size,size),(size,0)]
 
-print "Loading Voronoi cells..."
+print("Loading Voronoi cells...")
 
-centers, neighbors, vertices, regions = np.load('voronoi32k.npy')
-# centers, neighbors, vertices, regions = \
-#         voronoi.relaxed_voronoi(32000, bbox)
-# 
-# np.save('voronoi32k.npy', (centers, neighbors, vertices, regions))
+# centers, neighbors, vertices, regions = np.load('voronoi32k.npy')
+centers, neighbors, vertices, regions = \
+        voronoi.relaxed_voronoi(32000, bbox)
+
+np.save('voronoi32k.npy', (centers, neighbors, vertices, regions))
 
 vert_neighbors = [[] for i in vertices]
 vert_regions = [[] for i in vertices]
@@ -42,9 +42,9 @@ patches = [Polygon(vertices[p], True, ec='k') for p in regions]
 
 patchCol = PatchCollection(patches, cmap=plt.get_cmap('terrain'))
 
-print "Calculating landscape..."
+print("Calculating landscape...")
 
-noise = np.load('noise.npy')
+noise = perlin.Perlin(size, 8) #np.load('noise.npy')
 
 LAND = 0.25
 WATER = 0.15
@@ -58,7 +58,7 @@ def isLand(c):
     x = 2. * c[0] / size - 1
     y = 2. * c[1] / size - 1
 
-    return noise[v[0]][v[1]] > 0.316 * (1 + x**2 + y**2)
+    return noise[v[0], v[1]] > 0.316 * (1 + x**2 + y**2)
 
 for r in regions:
     land = 0
@@ -121,18 +121,18 @@ dist_to_peak = [None for d in dist_to_coast]
 for i, v in enumerate(vertices):
     dist_to_peak[i] = 1/np.mean([1/dist(v, p) for p in peaks])
 
-print "Calculating elevations..."
+print("Calculating elevations...")
 
 seed = 17770 #datetime.now().microsecond
 np.random.seed(seed)
 noise1 = perlin.Perlin(size, 6, 3)
 
 seed = datetime.now().microsecond
-print "Large-scale elevation seed: %d" % seed
+print("Large-scale elevation seed: %d" % seed)
 np.random.seed(seed)
 noise2 = perlin.Perlin(size, 1, 0)
 
-m = 1 - mpimg.imread('noisy_mountains.png').mean(axis=-1)
+m = perlin.Perlin(size, 6) # 1 - mpimg.imread('noisy_mountains.png').mean(axis=-1)
 
 mdtc = max(dist_to_coast)
 mdtp = max(dist_to_peak)
@@ -140,7 +140,7 @@ mdtp = max(dist_to_peak)
 elevations = [
         2 * noise1.at(*v) + 
         .4 * noise2.at(*v) + 
-        m[int(size-v[1]-1)][int(v[0]-1)]
+        m[int(size-v[1]-1), int(v[0]-1)]
         #(dc / (dp+dc))**2 if dc <= dp else (1/dp)**.35
         for v in vertices
         ]
