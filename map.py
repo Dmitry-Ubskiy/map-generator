@@ -21,6 +21,13 @@ def getVoronoi(size, bbox):
 
     centers, neighbors, vertices, regions = np.load('voronoi32k.npy')
 
+    # Generate voronoi32k.npy once, load it every other time
+    # centers, neighbors, vertices, regions = \
+    #         voronoi.relaxed_voronoi(32000, bbox)
+
+    # np.save('voronoi32k.npy', (centers, neighbors, vertices, regions))
+
+
     vert_neighbors = [[] for i in vertices]
     vert_regions = [[] for i in vertices]
     for r, p in enumerate(regions):
