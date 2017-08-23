@@ -120,15 +120,14 @@ def main():
     plt.tight_layout()
     plt.axis('off')
 
-    for i in range(100):
-        seed = datetime.now().microsecond
+    seed = 32268 # datetime.now().microsecond
 
-        cell_type = getBasicShape(size, neighbors, vertices, regions, seed)
+    cell_type = getBasicShape(size, neighbors, vertices, regions, seed)
 
-        patchCol.set_array(np.array(cell_type))
+    patchCol.set_array(np.array(cell_type))
 
-        plt.savefig('shapes/%06d.png' % seed, format='png', dpi=1200)
-        # plt.show()
+    plt.savefig('shapes/%06d.png' % seed, format='png', dpi=1200)
+    # plt.show()
 
 if __name__ == "__main__":
     main()
