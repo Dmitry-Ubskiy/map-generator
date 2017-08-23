@@ -12,6 +12,11 @@ import voronoi
 import perlin
 
 
+LAND = 0.25
+WATER = 0.15
+OCEAN = 0
+
+
 def dist(a, b):
     return np.linalg.norm(np.array(a) - b)
 
@@ -22,9 +27,9 @@ def getVoronoi(size, bbox):
     centers, neighbors, vertices, regions = np.load('voronoi32k.npy')
 
     # Generate voronoi32k.npy once, load it every other time
+
     # centers, neighbors, vertices, regions = \
     #         voronoi.relaxed_voronoi(32000, bbox)
-
     # np.save('voronoi32k.npy', (centers, neighbors, vertices, regions))
 
 
@@ -51,10 +56,6 @@ def getBasicShape(size, neighbors, vertices, regions, seed=None):
     np.random.seed(seed)
 
     noise = perlin.Perlin(size, 8)
-
-    LAND = 0.25
-    WATER = 0.15
-    OCEAN = 0
 
     cell_type = []
 
@@ -97,11 +98,91 @@ def getBasicShape(size, neighbors, vertices, regions, seed=None):
     return cell_type
 
 
+def getDistsToCoast(vertices, vert_regions, vert_neighbors, cell_type):
+    dist_to_coast = [None for v in vertices]
+
+    open_set = []
+    for v in range(len(vertices)):
+        ocean_count = 0
+        land_count = 0
+        for r in vert_regions[v]:
+            if cell_type[r] == OCEAN:
+                ocean_count += 1
+            elif cell_type[r] == LAND:
+                land_count += 1
+        if ocean_count > 0:
+            if land_count == 0:
+                dist_to_coast[v] = 0
+            else:
+                dist_to_coast[v] = 0
+                open_set.append(v)
+
+    index = 0
+    while index < len(open_set):
+        cur = open_set[index]
+        for v in vert_neighbors[cur]:
+            cur_to_v = dist(vertices[cur], vertices[v])
+            if dist_to_coast[v] is None or \
+               dist_to_coast[v] > dist_to_coast[cur] + cur_to_v:
+                dist_to_coast[v] = dist_to_coast[cur] + cur_to_v
+                open_set.append(v)
+        index += 1
+
+    return dist_to_coast
+
+
+def getTerrain(size, vertices, regions, cell_type, dist_to_coast, seed=None):
+    if seed is None:
+        seed = datetime.now().microsecond
+
+    print("Calculating large-scale terrain...")
+
+    print("Large-scale terrain seed: %d" % seed)
+    np.random.seed(seed)
+
+    noise = perlin.Perlin(size, 2, 3)
+
+    elevations = [noise[v] for v in vertices]
+
+    min_elevation = min(elevations)
+
+    elevations = [(el - min_elevation)**2 * dc**0.2 if dc >= 0 else -1
+            for el, dc in zip(elevations, dist_to_coast)]
+
+    max_elevation = max(elevations)
+
+    colors = [
+            np.mean(np.array(elevations)[r]) / max(elevations) * (1-LAND) + LAND 
+                if cell_type[i] == LAND
+                else cell_type[i]
+            for i, r in enumerate(regions)
+            ]
+
+    return colors
+
+
+
 def main():
     size = 4096
     bbox = [(0,0),(0,size),(size,size),(size,0)]
 
     centers, neighbors, vertices, regions = getVoronoi(size, bbox)
+
+    vert_neighbors = [[] for i in vertices]
+    vert_regions = [[] for i in vertices]
+    for r, p in enumerate(regions):
+        for i, v in enumerate(p[:-1]):
+            vert_regions[v].append(r)
+            if p[i-1] not in vert_neighbors[v]:
+                vert_neighbors[v].append(p[i-1])
+            if p[i+1] not in vert_neighbors[v]:
+                vert_neighbors[v].append(p[i+1])
+
+    cell_type = getBasicShape(size, neighbors, vertices, regions, 32268)
+
+    dist_to_coast = getDistsToCoast(vertices, vert_regions, 
+            vert_neighbors, cell_type)
+
 
     patches = [Polygon(vertices[p], True, ec='k') for p in regions]
 
@@ -120,14 +201,15 @@ def main():
     plt.tight_layout()
     plt.axis('off')
 
-    seed = 32268 # datetime.now().microsecond
+    for i in range(100):
+        seed = datetime.now().microsecond
 
-    cell_type = getBasicShape(size, neighbors, vertices, regions, seed)
+        colors = getTerrain(size, vertices, regions, cell_type, dist_to_coast, seed)
+        
+        patchCol.set_array(np.array(colors))
 
-    patchCol.set_array(np.array(cell_type))
-
-    plt.savefig('shapes/%06d.png' % seed, format='png', dpi=1200)
-    # plt.show()
+        plt.savefig('terrains/%06d.png' % seed, format='png', dpi=1200)
+        #plt.show()
 
 if __name__ == "__main__":
     main()
