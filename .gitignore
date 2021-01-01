@@ -1,0 +1,7 @@
+# images
+*.png
+*.png~
+
+# python files
+*.npy
+*.pyc
